@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>StateWise MPCE Maps</title>
+  <meta charset="utf-8" />
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700,800&display=swap" rel="stylesheet">
+  <link rel="icon" href="{{ url_for('static', path='favicon.ico') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/mpce-map.css') }}">
+</head>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            mirror: false
+        });
+  </script>
+  <form class="sector-form" id="sectorForm" onsubmit="return false;">
+    <h2>ML Based National MPCE Forecasting Portal</h2>
+    <div class="radio-section">
+      <h3>Year</h3>
+      <div class="capsule-control custom-radio" id="yearCapsule">
+        <input type="radio" name="year" id="year-2223" value="2223">
+        <label for="year-2223">2022-23</label>
+        <input type="radio" name="year" id="year-2324" value="2324">
+        <label for="year-2324">2023-24</label>
+      </div>
+    </div>
+    <div class="radio-section">
+      <h3>Sector</h3>
+        <div class="capsule-control" id="sectorCapsule">
+          <input type="checkbox" name="sector" id="sector-rural" value="Rural">
+          <label for="sector-rural">RURAL</label>
+          <input type="checkbox" name="sector" id="sector-urban" value="Urban">
+          <label for="sector-urban">URBAN</label>
+        </div>
+    </div>
+    <div class="state-section">
+      <label for="stateSelect" style="text-align: left;"><strong>Select States:</strong></label>
+      <div class="state-select-container" style="display: flex; align-items: center; gap: 250px;">
+        <div class="custom-multiselect" id="customMultiselect">
+          <div class="dropdown-selected" id="dropdownSelected" onclick="toggleDropdown()">
+            <span id="dropdownPlaceholder">Choose states...</span>
+            <span class="dropdown-arrow">&#9662;</span>
+          </div>
+          <div class="dropdown-options" id="dropdownOptions"></div>
+        </div>
+        <button type="button" id="indiaMpceBtn" class="clear-selection-btn" style="display:none;" onclick="selectIndiaOnly()">India MPCE</button>
+        <div id="clearSelectionContainer" style="display: none;">
+          <button type="button" id="clearSelectionBtn" class="clear-selection-btn" onclick="clearSelection()">Clear Selection</button>
+        </div>
+      </div>
+      <div class="selected-states-container">
+        <h3>States</h3>
+        <div id="selectedStates"></div>
+      </div>
+    </div>
+    <button type="submit" class="sector-submit-btn">Submit</button>
+  </form>
+  <div class="main-container" id="mapsContainer" style="display:none;">
+    <div class="map-row" id="row-rural">
+      <div class="map-container" id="container-actual-rural" data-aos="zoom-in" data-aos-delay="100">
+        <div class="map-content">
+          <div class="map-title">Actual MPCE (Rural)</div>
+          <svg id="map1" class="map-svg"></svg>
+          <div id="tooltip1" class="tooltip"></div>
+        </div>
+        <div class="legend-container" id="legend1"></div>
+      </div>
+      <div class="map-container" id="container-predicted-rural" data-aos="zoom-in" data-aos-delay="100">
+        <div class="map-content">
+          <div class="map-title">Predicted MPCE (Rural)</div>
+          <svg id="map3" class="map-svg"></svg>
+          <div id="tooltip3" class="tooltip"></div>
+        </div>
+        <div class="legend-container" id="legend3"></div>
+      </div>
+    </div>
+    <div class="map-row" id="row-urban">
+      <div class="map-container" id="container-actual-urban" data-aos="zoom-in" data-aos-delay="100">
+        <div class="map-content">
+          <div class="map-title">Actual MPCE (Urban)</div>
+          <svg id="map2" class="map-svg"></svg>
+          <div id="tooltip2" class="tooltip"></div>
+        </div>
+        <div class="legend-container" id="legend2"></div>
+      </div>
+      <div class="map-container" id="container-predicted-urban" data-aos="zoom-in" data-aos-delay="100">
+        <div class="map-content">
+          <div class="map-title">Predicted MPCE (Urban)</div>
+          <svg id="map4" class="map-svg"></svg>
+          <div id="tooltip4" class="tooltip"></div>
+        </div>
+        <div class="legend-container" id="legend4"></div>
+      </div>
+    </div>
+  </div>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="{{ url_for('static', path='js/mpce-map.js') }}"></script>
+</body>
+</html>

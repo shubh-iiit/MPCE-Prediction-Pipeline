@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Household Survey Form</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/survey-form.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            mirror: false
+        });
+    </script>
+    <canvas id="bg-anim"></canvas>
+    <div class="container">
+        <div class="header">
+            <h1>🏡 ML Based Household Level Total Expense Predictor</h1>
+            <p>Welcome! Please fill out this interactive survey. ✍️</p>
+        </div>
+        <div class="form-content">
+            <form id="surveyForm" autocomplete="off">
+                <!-- Section 1: Location Info -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">1</div>
+                        <div class="section-title">📍 Household Identification & Location Info</div>
+                    </div>
+                    <div class="section-info">
+                        Let's start by knowing where you are from! 🌍
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="required-label">Sector of Residence 🏠</label>
+                            <div class="radio-group">
+                                <div class="radio-item">
+                                    <input type="radio" id="rural" name="sector" value="1" required>
+                                    <label for="rural">Rural</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="urban" name="sector" value="2" required>
+                                    <label for="urban">Urban</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="state" class="required-label">State 🗺️</label>
+                            <select class="form-control" id="state" name="state" required aria-label="State">
+                                <option value="" disabled selected>Select State</option>
+                            </select>
+                            <div class="form-error">Select your state from the list</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="district" class="required-label">District 🏢</label>
+                            <select class="form-control" id="district" name="district" required aria-label="District">
+                                <option value="" disabled selected>Select District</option>
+                            </select>
+                            <div class="form-error">Choose your district from the selected state</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Demographics -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">2</div>
+                        <div class="section-title">👨‍👩‍👧‍👦 Household Demographics</div>
+                    </div>
+                    <div class="section-info">
+                        Tell us about your household members. 👨‍👩‍👧‍👦
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="household_type" class="required-label">Primary Source of Household Income</label>
+                            <select class="form-control" id="household_type" name="household_type" required aria-label="Primary Source of Household Income">
+                                <option value="" disabled selected>Select Household Type</option>
+                            </select>
+                            <div class="form-error">Please select income source for the household.</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="religion" class="required-label">Religion 🛐</label>
+                            <select class="form-control" id="religion" name="religion" required aria-label="Religion">
+                                <option value="" disabled selected>Select Religion</option>
+                            </select>
+                            <div class="form-error">Please select a religion</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="caste" class="required-label">Social Group 🧑‍🤝‍🧑</label>
+                            <select class="form-control" id="caste" name="caste" required aria-label="Social Group">
+                                <option value="" disabled selected>Select Social Group</option>
+                            </select>
+                            <div class="form-error">Please select a social group</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="hh_size" class="required-label">Total Members in Household 👥</label>
+                            <input type="number" class="form-control" id="hh_size" name="hh_size" min="1" max="30" value="" required aria-label="Total Members in Household">
+                            <div class="form-error">Please include all members living under the same roof (minimum 1).</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Employment -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">3</div>
+                        <div class="section-title">💼 Employment Details</div>
+                    </div>
+                    <div class="section-info">
+                        Employment details help us understand your household's occupation. 💼
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nic" class="required-label">Primary Industry / Business Sector 🏭</label>
+                            <select class="form-control select2-nic" id="nic" name="nic" required>
+                                <option value="">Select Industry</option>
+                                <!-- Options will be populated by JS -->
+                            </select>
+                            <div class="form-error">Please select the industry your household/business is mainly involved in.</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="nco" class="required-label">Primary Occupation / Type of Work 👷‍♂️</label>
+                            <select class="form-control select2-nco" id="nco" name="nco" required>
+                                <option value="">Select Occupation</option>
+                                <!-- Options will be populated by JS -->
+                            </select>
+                            <div class="form-error">Select the primary occupation or work type of the household’s main earner.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Online Purchases -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">4</div>
+                        <div class="section-title">🛒 Online Purchases in Last 365 Days</div>
+                    </div>
+                    <div class="section-info">
+                        Have you shopped online? Let us know! 🛍️
+                    </div>
+                    <div class="checkbox-grid">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_clothing" name="online_purchases" value="clothing">
+                            <label for="online_clothing">Clothing</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_footwear" name="online_purchases" value="footwear">
+                            <label for="online_footwear">Footwear</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_furniture" name="online_purchases" value="furniture">
+                            <label for="online_furniture">Furniture & Fixtures</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_mobile" name="online_purchases" value="mobile">
+                            <label for="online_mobile">Mobile Handset</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_personal" name="online_purchases" value="personal">
+                            <label for="online_personal">Personal Goods</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_recreation" name="online_purchases" value="recreation">
+                            <label for="online_recreation">Recreation Goods</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_appliances" name="online_purchases" value="appliances">
+                            <label for="online_appliances">Household Appliances</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_crockery" name="online_purchases" value="crockery">
+                            <label for="online_crockery">Crockery Utensils</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_sports" name="online_purchases" value="sports">
+                            <label for="online_sports">Sports Goods</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_medical" name="online_purchases" value="medical">
+                            <label for="online_medical">Medical Equipment</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="online_bedding" name="online_purchases" value="bedding">
+                            <label for="online_bedding">Bedding</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Assets -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">5</div>
+                        <div class="section-title">🏠 Household Assets</div>
+                    </div>
+                    <div class="section-info">
+                        Which of these assets do you own? 🏡
+                    </div>
+                    <div class="checkbox-grid">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_tv" name="assets" value="television">
+                            <label for="asset_tv">Television</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_radio" name="assets" value="radio">
+                            <label for="asset_radio">Radio</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_laptop" name="assets" value="laptop">
+                            <label for="asset_laptop">Laptop/PC</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_mobile" name="assets" value="mobile">
+                            <label for="asset_mobile">Mobile Handset</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_bicycle" name="assets" value="bicycle">
+                            <label for="asset_bicycle">Bicycle</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_motorcycle" name="assets" value="motorcycle">
+                            <label for="asset_motorcycle">Motorcycle/Scooter</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_car" name="assets" value="car">
+                            <label for="asset_car">Car/Jeep/Van</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_trucks" name="assets" value="trucks">
+                            <label for="asset_trucks">Trucks</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_cart" name="assets" value="cart">
+                            <label for="asset_cart">Animal Cart</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_refrigerator" name="assets" value="refrigerator">
+                            <label for="asset_refrigerator">Refrigerator</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_washing_machine" name="assets" value="washing_machine">
+                            <label for="asset_washing_machine">Washing machine</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="asset_cooler" name="assets" value="cooler">
+                            <label for="asset_cooler">Airconditioner/Aircooler</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Consumption Metrics -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">6</div>
+                        <div class="section-title">📊 Household Metrics</div>
+                    </div>
+                    <div class="section-info">
+                        A few more details about your household. You're doing great! 💪
+                    </div>
+                    <div class="number-input-group">
+                        <div style="display: flex; width: 100%; gap: 20px; flex-wrap: wrap;">
+                            <!-- Row 1: Min/Max Age -->
+                            <div style="display: flex; flex: 1 1 100%; gap: 32px; justify-content: center;">
+                                <div class="form-group">
+                                    <label for="max_age" class="required-label">Maximum Age in Household</label>
+                                    <input type="number" class="form-control" id="max_age" name="max_age" min="0" max="120" value="" required aria-label="Maximum Age in Household">
+                                    <div class="form-error">Enter age of the oldest member</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="min_age" class="required-label">Minimum Age in Household</label>
+                                    <input type="number" class="form-control" id="min_age" name="min_age" min="0" max="120" value="" required aria-label="Minimum Age in Household">
+                                    <div class="form-error">Enter age of the youngest member</div>
+                                </div>
+                            </div>
+                            <!-- Row 2: Gender counts -->
+                            <div style="display: flex; flex: 1 1 100%; gap: 32px; justify-content: center;">
+                                <div class="form-group">
+                                    <label for="gender_male" class="required-label">Total Male Members</label>
+                                    <input type="number" class="form-control" id="gender_male" name="gender_male" min="0" max="30" value="0" required aria-label="Total Male Members">
+                                    <div class="form-error">Enter number of male members (min 0)</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gender_female" class="required-label">Total Female Members</label>
+                                    <input type="number" class="form-control" id="gender_female" name="gender_female" min="0" max="30" value="0" required aria-label="Total Female Members">
+                                    <div class="form-error">Enter number of female members (min 0)</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gender_others" class="required-label">Total Other Gender Members</label>
+                                    <input type="number" class="form-control" id="gender_others" name="gender_others" min="0" max="30" value="0" required aria-label="Total Other Gender Members">
+                                    <div class="form-error">Include transgender/non-binary individuals</div>
+                                </div>
+                            </div>
+                            <!-- Row 3: Min/Max Edu -->
+                            <div style="display: flex; flex: 1 1 100%; gap: 32px; justify-content: center;">
+                                <div class="form-group">
+                                    <label for="max_edu" class="required-label">Highest Education Level in Household</label>
+                                    <select class="form-control" id="max_edu" name="max_edu" required aria-label="Highest Education Level in Household">
+                                        <option value="" disabled selected>Select Education Level</option>
+                                    </select>
+                                    <div class="form-error">E.g., PhD, Postgraduate, Diploma</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="min_edu" class="required-label">Lowest Education Level in Household</label>
+                                    <select class="form-control" id="min_edu" name="min_edu" required aria-label="Lowest Education Level in Household">
+                                        <option value="" disabled selected>Select Education Level</option>
+                                    </select>
+                                    <div class="form-error">E.g., No schooling, Primary only</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 7: Meals -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">7</div>
+                        <div class="section-title">🍽️ Meal Consumption Patterns</div>
+                    </div>
+                    <div class="section-info">
+                        Tell us about your meal habits. 🍲
+                    </div>
+                    <div class="number-input-group">
+                        <div class="form-group">
+                            <label for="meals_daily" class="required-label">Average Meals Per Day Per Person</label>
+                            <input type="number" class="form-control" id="meals_daily" name="meals_daily" min="0" value="0" required aria-label="Average Meals Per Day Per Person">
+                            <div class="form-error">E.g., 2 or 3 meals/day</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="meals_school" class="required-label">Meals from school / balwadi (last 30 days)</label>
+                            <input type="number" class="form-control" id="meals_school" name="meals_school" min="0" value="0" required aria-label="Meals from school/balwadi (last 30 days)">
+                            <div class="form-error">Only include meals provided at school/balwadi</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="meals_employer" class="required-label">Meals from employer (last 30 days)</label>
+                            <input type="number" class="form-control" id="meals_employer" name="meals_employer" min="0" value="0" required aria-label="Meals from employer (last 30 days)">
+                            <div class="form-error">Meals received while working or on duty</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="meals_payment" class="required-label">Paid Meals (last 30 days)</label>
+                            <input type="number" class="form-control" id="meals_payment" name="meals_payment" min="0" value="0" required aria-label="Paid Meals (last 30 days)">
+                            <div class="form-error">Include canteen, hotel, or purchased meals</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="meals_home" class="required-label">Home-Cooked Meals (last 30 days)</label>
+                            <input type="number" class="form-control" id="meals_home" name="meals_home" min="0" value="0" required aria-label="Home-Cooked Meals (last 30 days)">
+                            <div class="form-error">Meals cooked and eaten at home</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 8: Internet -->
+                <div class="section" data-aos="fade-up" data-aos-offset="100" data-aos-easing="ease-in-sine">
+                    <div class="section-header">
+                        <div class="section-number">8</div>
+                        <div class="section-title">🌐 Internet Usage</div>
+                    </div>
+                    <div class="section-info">
+                        How many people use the internet in your household? 📱
+                    </div>
+                    <div class="form-group">
+                        <label for="internet_users" class="required-label">Number of Household Internet Users 👨‍💻</label>
+                        <input type="number" class="form-control" id="internet_users" name="internet_users" min="0" max="30" value="0" required aria-label="Number of Household Internet Users">
+                        <div class="form-error">How many people regularly use the internet?</div>
+                    </div>
+                </div>
+                <div class="submit-section">
+                    <button type="submit" class="submit-btn">Submit Response</button>
+                </div>
+            </form>
+
+            <div class="result-section" id="resultSection" data-aos="fade-up" data-aos-easing="ease-in-sine">
+                <div class="result-card" id="resultCard" style="display:none;">
+                    <div class="result-icon" style="font-size:2.5rem; margin-bottom:10px;">💰</div>
+                    <div class="result-amount" id="resultAmount"></div>
+                    <div class="result-interpretation" id="resultInterpretation" style="margin: 12px 0 8px 0; font-size:1.1rem;"></div>
+                </div>
+                <div class="result-details" id="resultDetails">
+                    Form submitted successfully! Thank you for your responses.
+                </div>
+                <div id="dataPreview" style="margin-top: 20px; text-align: left; font-size: 0.9rem;">
+                    <!-- Data preview will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', path='js/formData.js') }}"></script>
+    <script type="module" src="{{ url_for('static', path='js/main.js') }}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    const canvas = document.getElementById('bg-anim');
+    const ctx = canvas.getContext('2d');
+    let w = window.innerWidth, h = window.innerHeight;
+    let circles = [];
+    let mouse = { x: w/2, y: h/2 };
+
+    function resize() {
+        w = window.innerWidth;
+        h = window.innerHeight;
+        canvas.width = w;
+        canvas.height = h;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Create circles
+    circles = [];
+    for (let i = 0; i < 18; i++) {
+        circles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: 30 + Math.random() * 40,
+            dx: (Math.random() - 0.5) * 0.5,
+            dy: (Math.random() - 0.5) * 0.5,
+            color: `rgba(${90+Math.random()*80},${140+Math.random()*80},${238+Math.random()*10},0.13)`
+        });
+    }
+
+    window.addEventListener('mousemove', e => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    // Remove scroll event that modifies mouse.y
+
+    function animate() {
+        // Always keep canvas size in sync with viewport
+        if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+            resize();
+        }
+        ctx.clearRect(0, 0, w, h);
+        for (let c of circles) {
+            // Move slightly toward mouse
+            c.x += c.dx + (mouse.x - c.x) * 0.0005;
+            c.y += c.dy + (mouse.y - c.y) * 0.0005;
+            // Bounce off edges
+            if (c.x < c.r || c.x > w - c.r) c.dx *= -1;
+            if (c.y < c.r || c.y > h - c.r) c.dy *= -1;
+            // Draw
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.r, 0, 2 * Math.PI);
+            ctx.fillStyle = c.color;
+            ctx.fill();
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+    </script>
+    <script>
+document.getElementById('surveyForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+});
+    </script>
+</body>
+</html>
