@@ -37,6 +37,12 @@ This repository contains code and resources for predicting Monthly Per Capita Ex
 │   ├── static/
 │   ├── templates/
 │   └── requirements.txt
+├── dashboard/                    # Frontend (FastAPI, static, templates)
+│   ├── assets/
+│   ├── backend/
+│   ├── frontend/
+│   ├── readme.md/
+│   └── requirements.txt
 ├── testing/                     # Unit and integration tests
 │   ├── test.py
 │   └── dummy_test.py
