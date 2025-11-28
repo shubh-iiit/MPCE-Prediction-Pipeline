@@ -3,8 +3,9 @@ import os
 import json
 import joblib
 from typing import Dict, Any
+from pathlib import Path
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from huggingface_hub import hf_hub_download
@@ -57,9 +58,18 @@ def load_models():
     except Exception as e:
         raise Exception(f"Failed to load models: {str(e)}")
 
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok", "message": "MPCE Prediction API"}
+
 @app.get("/")
 async def root():
-    """Health check endpoint."""
+    """Serve the main HTML page."""
+    static_dir = Path(__file__).parent.parent / "public"
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
     return {"status": "ok", "message": "MPCE Prediction API"}
 
 @app.post("/api/predict")
@@ -119,8 +129,7 @@ async def predict(data: Dict[str, Any]):
             status_code=500
         )
 
-# Mount static files last (so API routes take precedence)
-from pathlib import Path
+# Mount static files for CSS/JS/images (but not root)
 static_dir = Path(__file__).parent.parent / "public"
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
