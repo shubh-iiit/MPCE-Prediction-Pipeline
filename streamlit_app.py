@@ -17,17 +17,17 @@ def load_models_from_huggingface():
         
         st.info("📥 Downloading models from Hugging Face...")
         
-        # Download classifier
+        # Download classifier from models_clf folder
         clf_path = hf_hub_download(
             repo_id=MODEL_REPO,
-            filename="sector_income_classifiers_tuned.pkl",
+            filename="models_clf/sector_income_classifiers_tuned.pkl",
             cache_dir=CACHE_DIR
         )
         
-        # Download regressor
+        # Download regressor from models_regressor folder
         reg_path = hf_hub_download(
             repo_id=MODEL_REPO,
-            filename="sector_income_randomforestmodel.pkl",
+            filename="models_regressor/sector_income_randomforestmodel.pkl",
             cache_dir=CACHE_DIR
         )
         
