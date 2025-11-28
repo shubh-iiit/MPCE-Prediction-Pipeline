@@ -1,13 +1,8 @@
 import streamlit as st
 import joblib
 import os
-import gdown
 import pandas as pd
 from typing import Dict, Any
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import logging
-
-logging.basicConfig(level=logging.INFO)
 
 # ==================== Google Drive Model Loading ====================
 MODELS_BASE_DIR = os.path.expanduser('~/.mpce_models')
@@ -17,85 +12,81 @@ DRIVE_FOLDERS = {
 }
 
 
-def download_model_folder(folder_type: str, folder_id: str, output_dir: str) -> bool:
-    """Download a single model folder from Google Drive."""
-    try:
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
-        
-        # Check if already downloaded
-        if os.path.exists(output_dir) and os.listdir(output_dir):
-            logging.info(f"{folder_type} models already cached")
-            return True
-        
-        url = f'https://drive.google.com/drive/folders/{folder_id}'
-        logging.info(f"Downloading {folder_type} models...")
-        gdown.download_folder(url, output=output_dir, quiet=False)
-        return True
-    except Exception as e:
-        logging.error(f"Error downloading {folder_type}: {e}")
-        return False
-
-
 @st.cache_resource
 def download_and_load_models():
-    """Download models from Google Drive in parallel and cache them."""
+    """Download models from Google Drive and cache them."""
+    try:
+        import gdown
+    except ImportError:
+        st.error("gdown not installed")
+        st.stop()
+    
     clf_dir = os.path.join(MODELS_BASE_DIR, 'models_clf')
     regressor_dir = os.path.join(MODELS_BASE_DIR, 'models_regressor')
     
-    progress_placeholder = st.empty()
+    # Download classifier models if needed
+    if not os.path.exists(clf_dir) or not os.listdir(clf_dir):
+        st.info("📥 Downloading classifier models...")
+        os.makedirs(clf_dir, exist_ok=True)
+        try:
+            url = f'https://drive.google.com/drive/folders/{DRIVE_FOLDERS["clf"]}'
+            gdown.download_folder(url, output=clf_dir, quiet=True, use_cookies=False)
+        except Exception as e:
+            st.error(f"Failed to download classifier: {e}")
+            return None, None
     
-    # Download both in parallel
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        clf_future = executor.submit(download_model_folder, 'Classifier', DRIVE_FOLDERS['clf'], clf_dir)
-        reg_future = executor.submit(download_model_folder, 'Regressor', DRIVE_FOLDERS['regressor'], regressor_dir)
+    # Download regressor models if needed
+    if not os.path.exists(regressor_dir) or not os.listdir(regressor_dir):
+        st.info("📥 Downloading regressor models...")
+        os.makedirs(regressor_dir, exist_ok=True)
+        try:
+            url = f'https://drive.google.com/drive/folders/{DRIVE_FOLDERS["regressor"]}'
+            gdown.download_folder(url, output=regressor_dir, quiet=True, use_cookies=False)
+        except Exception as e:
+            st.error(f"Failed to download regressor: {e}")
+            return None, None
+    
+    try:
+        # Load classifier
+        clf_path = os.path.join(clf_dir, 'sector_income_classifiers_tuned.pkl')
+        if not os.path.exists(clf_path):
+            st.error(f"Classifier file not found")
+            return None, None
+        clf_data = joblib.load(clf_path)
         
-        # Wait for both to complete
-        results = []
-        for future in as_completed([clf_future, reg_future]):
-            results.append(future.result())
-    
-    if not all(results):
-        st.error("❌ Failed to download models. Please refresh the page.")
-        st.stop()
+        # Load regressor
+        reg_path = os.path.join(regressor_dir, 'sector_income_randomforestmodel.pkl')
+        if not os.path.exists(reg_path):
+            st.error(f"Regressor file not found")
+            return None, None
+        reg_data = joblib.load(reg_path)
+        
+        return clf_data, reg_data
+    except Exception as e:
+        st.error(f"Failed to load models: {e}")
+        return None, None
 
-    # Load classifier
-    clf_path = os.path.join(clf_dir, 'sector_income_classifiers_tuned.pkl')
-    if not os.path.exists(clf_path):
-        st.error(f"❌ Classifier model not found at {clf_path}")
-        st.stop()
-    
-    progress_placeholder.info("📦 Loading classifier model...")
-    clf_data = joblib.load(clf_path)
 
-    # Load regressor
-    reg_path = os.path.join(regressor_dir, 'sector_income_randomforestmodel.pkl')
-    if not os.path.exists(reg_path):
-        st.error(f"❌ Regressor model not found at {reg_path}")
-        st.stop()
-    
-    progress_placeholder.info("📦 Loading regressor model...")
-    reg_data = joblib.load(reg_path)
-    
-    progress_placeholder.success("✅ Models loaded successfully!")
-
-    return clf_data, reg_data
 # ==================== Load Models ====================
 st.set_page_config(page_title="MPCE Prediction", layout="wide")
 
 with st.spinner("Loading models..."):
     clf_data, reg_data = download_and_load_models()
 
+if clf_data is None or reg_data is None:
+    st.error("Failed to load models. Please refresh the page.")
+    st.stop()
+
 # Extract data
-regressors_raw: Dict[Any, Any] = reg_data["models"]
+regressors_raw: Dict[Any, Any] = reg_data.get("models", {})
 regressors: Dict[int, Any] = {int(k): v for k, v in regressors_raw.items()}
-feature_info: Dict[str, Any] = reg_data["feature_info"]
+feature_info: Dict[str, Any] = reg_data.get("feature_info", {})
 classifiers = clf_data
 
-cat_cols = feature_info["categorical_cols"]
-num_cols = feature_info["numerical_cols"]
-encoders = feature_info["encoders"]
-scaler = feature_info["scaler"]
+cat_cols = feature_info.get("categorical_cols", [])
+num_cols = feature_info.get("numerical_cols", [])
+encoders = feature_info.get("encoders", {})
+scaler = feature_info.get("scaler")
 
 
 # ==================== Feature Preprocessing ====================
@@ -103,24 +94,25 @@ def get_expected_feature_order():
     feature_list = []
     feature_list.extend(num_cols)
     for col in cat_cols:
-        cats = encoders[col].categories_[0]
-        feature_list.extend([f"{col}_{cat}" for cat in cats])
+        if col in encoders:
+            cats = encoders[col].categories_[0]
+            feature_list.extend([f"{col}_{cat}" for cat in cats])
     return feature_list
 
 
 def preprocess_features(raw_df: pd.DataFrame) -> pd.DataFrame:
-    categorical_cols = feature_info['categorical_cols']
-    numerical_cols   = feature_info['numerical_cols']
-    encoders         = feature_info['encoders']
-    scaler           = feature_info['scaler']
+    categorical_cols = feature_info.get('categorical_cols', [])
+    numerical_cols = feature_info.get('numerical_cols', [])
+    encoders = feature_info.get('encoders', {})
+    scaler = feature_info.get('scaler')
 
     encoded = []
-    # encode all categoricals
+    
     for col in categorical_cols:
-        if col in raw_df:
+        if col in raw_df and col in encoders:
             encoded.append(encoders[col].transform(raw_df[[col]]))
-    # scale numericals
-    if numerical_cols:
+    
+    if numerical_cols and scaler:
         scaled = scaler.transform(raw_df[numerical_cols])
         encoded.append(scaled)
 
@@ -131,9 +123,8 @@ def preprocess_features(raw_df: pd.DataFrame) -> pd.DataFrame:
 
 # ==================== UI ====================
 st.title("🏠 MPCE Household Prediction")
-st.write("Enter household details to predict Monthly Per Capita Expenditure (MPCE).")
+st.write("Enter household details to predict Monthly Per Capita Expenditure.")
 
-# Create columns for better layout
 col1, col2 = st.columns(2)
 
 with col1:
@@ -224,7 +215,6 @@ with col9:
 # ==================== Prediction ====================
 if st.button("🔮 Predict MPCE", use_container_width=True):
     try:
-        # Create input dataframe
         input_data = {
             "Sector": sector,
             "State": state,
@@ -284,15 +274,14 @@ if st.button("🔮 Predict MPCE", use_container_width=True):
         input_df = pd.DataFrame([input_data])
         processed_df = preprocess_features(input_df)
         
-        # Get regressor for the sector
         regressor = regressors.get(sector)
         if regressor is None:
-            st.error(f"❌ No regressor found for sector {sector}")
+            st.error(f"No regressor for sector {sector}")
         else:
             predicted_mpce = regressor.predict(processed_df)[0]
             sector_name = "Rural" if sector == 1 else "Urban"
             
-            st.success(f"✅ Prediction Complete!")
+            st.success("Prediction Complete!")
             col_result1, col_result2 = st.columns(2)
             with col_result1:
                 st.metric("Predicted MPCE", f"₹{predicted_mpce:.2f}")
@@ -300,8 +289,7 @@ if st.button("🔮 Predict MPCE", use_container_width=True):
                 st.metric("Sector", sector_name)
                 
     except Exception as e:
-        st.error(f"❌ Error during prediction: {str(e)}")
-        st.write(f"Debug info: {e}")
+        st.error(f"Error: {str(e)}")
 
 st.markdown("---")
-st.markdown("**Note:** This model requires all input features. Ensure all fields are filled.")
+st.markdown("Note: This model requires all input features.")
