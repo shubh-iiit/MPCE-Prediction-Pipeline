@@ -1,153 +1,116 @@
 import streamlit as st
-import pandas as pd
-import joblib
-import os
-import warnings
-import pickle
-warnings.filterwarnings('ignore')
 
-# ==================== Hugging Face Model Loading ====================
-MODEL_REPO = "shubh-iiit/mpce-models"
-CACHE_DIR = os.path.expanduser('~/.mpce_cache')
-os.makedirs(CACHE_DIR, exist_ok=True)
+st.write("✓ Step 1: Streamlit imported")
 
-
-@st.cache_resource
-def load_models_from_huggingface():
-    """Load models from Hugging Face Hub with fallback loaders."""
-    try:
-        from huggingface_hub import hf_hub_download
-        
-        st.write("📥 Step 1: Downloading models...")
-        
-        # Download classifier
-        try:
-            clf_path = hf_hub_download(
-                repo_id=MODEL_REPO,
-                filename="models_clf/sector_income_classifiers_tuned.pkl",
-                cache_dir=CACHE_DIR
-            )
-            st.write(f"✓ Classifier file ready: {os.path.getsize(clf_path)} bytes")
-        except Exception as e:
-            st.write(f"⚠ Trying alternate classifier path...")
-            clf_path = hf_hub_download(
-                repo_id=MODEL_REPO,
-                filename="sector_income_classifiers_tuned.pkl",
-                cache_dir=CACHE_DIR
-            )
-        
-        # Download regressor
-        try:
-            reg_path = hf_hub_download(
-                repo_id=MODEL_REPO,
-                filename="models_regressor/sector_income_randomforestmodel.pkl",
-                cache_dir=CACHE_DIR
-            )
-            st.write(f"✓ Regressor file ready: {os.path.getsize(reg_path)} bytes")
-        except Exception as e:
-            st.write(f"⚠ Trying alternate regressor path...")
-            reg_path = hf_hub_download(
-                repo_id=MODEL_REPO,
-                filename="sector_income_randomforestmodel.pkl",
-                cache_dir=CACHE_DIR
-            )
-        
-        st.write("📦 Step 2: Loading models into memory...")
-        
-        # Load classifier with fallback
-        try:
-            st.write("Loading classifier with joblib...")
-            clf_data = joblib.load(clf_path)
-            st.write("✓ Classifier loaded")
-        except Exception as e1:
-            st.write(f"⚠ joblib failed: {e1}")
-            st.write("Trying pickle...")
-            try:
-                with open(clf_path, 'rb') as f:
-                    clf_data = pickle.load(f)
-                st.write("✓ Classifier loaded with pickle")
-            except Exception as e2:
-                st.error(f"Both methods failed: {e2}")
-                return None, None
-        
-        # Load regressor with fallback
-        try:
-            st.write("Loading regressor with joblib...")
-            reg_data = joblib.load(reg_path)
-            st.write("✓ Regressor loaded")
-        except Exception as e1:
-            st.write(f"⚠ joblib failed: {e1}")
-            st.write("Trying pickle...")
-            try:
-                with open(reg_path, 'rb') as f:
-                    reg_data = pickle.load(f)
-                st.write("✓ Regressor loaded with pickle")
-            except Exception as e2:
-                st.error(f"Both methods failed: {e2}")
-                return None, None
-        
-        st.write("✅ All models loaded!")
-        return clf_data, reg_data
-        
-    except Exception as e:
-        st.error(f"❌ Unexpected error: {e}")
-        import traceback
-        st.write(traceback.format_exc())
-        return None, None
-
-
-# ==================== Setup ====================
-st.set_page_config(page_title="MPCE Prediction", layout="wide")
-st.title("🏠 MPCE Household Prediction")
-
-st.write("Loading models...")
-clf_data, reg_data = load_models_from_huggingface()
-
-if clf_data is None or reg_data is None:
-    st.error("Could not load models. See details above.")
+try:
+    import pandas as pd
+    st.write("✓ Step 2: pandas imported")
+except Exception as e:
+    st.error(f"✗ pandas failed: {e}")
     st.stop()
 
-st.write("Parsing models...")
 try:
-    st.write(f"📊 Regressor data type: {type(reg_data)}")
-    st.write(f"📊 Regressor keys: {list(reg_data.keys()) if isinstance(reg_data, dict) else 'Not a dict'}")
-    st.write(f"📊 Classifier data type: {type(clf_data)}")
-    st.write(f"📊 Classifier keys: {list(clf_data.keys()) if isinstance(clf_data, dict) else 'Not a dict'}")
-    
-    # Handle different possible structures
-    if isinstance(reg_data, dict):
-        regressors_raw = reg_data.get("models", {})
-        if not regressors_raw:
-            st.write("⚠️ 'models' key not found, checking for direct regressor...")
-            regressors_raw = {1: reg_data, 2: reg_data}  # Fallback
-        
-        regressors = {int(k): v for k, v in regressors_raw.items()}
-        feature_info = reg_data.get("feature_info", {})
-    else:
-        st.write("⚠️ Regressor is not a dict, treating as direct model")
-        regressors = {1: reg_data, 2: reg_data}
-        feature_info = {}
-    
-    if isinstance(clf_data, dict):
-        cat_cols = clf_data.get("feature_info", {}).get("categorical_cols", [])
-        if not cat_cols and "categorical_cols" in clf_data:
-            cat_cols = clf_data["categorical_cols"]
-    else:
-        cat_cols = []
-    
-    num_cols = feature_info.get("numerical_cols", [])
-    encoders = feature_info.get("encoders", {})
-    scaler = feature_info.get("scaler")
-    
-    st.success(f"✓ {len(regressors)} regressors | {len(cat_cols)} cat cols | {len(num_cols)} num cols")
+    import joblib
+    st.write("✓ Step 3: joblib imported")
 except Exception as e:
-    st.error(f"Failed to parse: {e}")
+    st.error(f"✗ joblib failed: {e}")
+    st.stop()
+
+try:
+    import os
+    st.write("✓ Step 4: os imported")
+except Exception as e:
+    st.error(f"✗ os failed: {e}")
+    st.stop()
+
+try:
+    import warnings
+    import pickle
+    warnings.filterwarnings('ignore')
+    st.write("✓ Step 5: warnings & pickle imported")
+except Exception as e:
+    st.error(f"✗ warnings/pickle failed: {e}")
+    st.stop()
+
+try:
+    from huggingface_hub import hf_hub_download
+    st.write("✓ Step 6: huggingface_hub imported")
+except Exception as e:
+    st.error(f"✗ huggingface_hub failed: {e}")
+    st.stop()
+
+st.write("---")
+st.write("All imports successful! Configuring page...")
+
+try:
+    st.set_page_config(page_title="MPCE Prediction", layout="wide")
+    st.title("🏠 MPCE Household Prediction")
+    st.write("Page config done!")
+except Exception as e:
+    st.error(f"✗ Page config failed: {e}")
+    st.stop()
+
+st.write("Setting up cache directory...")
+
+try:
+    MODEL_REPO = "shubh-iiit/mpce-models"
+    CACHE_DIR = os.path.expanduser('~/.mpce_cache')
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    st.write(f"✓ Cache dir ready: {CACHE_DIR}")
+except Exception as e:
+    st.error(f"✗ Cache dir failed: {e}")
+    st.stop()
+
+st.write("---")
+st.write("Now attempting to download models...")
+
+try:
+    # Try to download classifier
+    st.write("📥 Downloading classifier...")
+    clf_path = hf_hub_download(
+        repo_id=MODEL_REPO,
+        filename="models_clf/sector_income_classifiers_tuned.pkl",
+        cache_dir=CACHE_DIR
+    )
+    st.write(f"✓ Classifier downloaded: {os.path.getsize(clf_path)} bytes")
+    
+    # Try to load classifier
+    st.write("📦 Loading classifier with joblib...")
+    clf_data = joblib.load(clf_path)
+    st.write(f"✓ Classifier loaded: type={type(clf_data)}")
+    if isinstance(clf_data, dict):
+        st.write(f"  Dict keys: {list(clf_data.keys())}")
+    
+except Exception as e:
+    st.error(f"✗ Classifier error: {e}")
     import traceback
     st.write(traceback.format_exc())
     st.stop()
 
+try:
+    # Try to download regressor
+    st.write("📥 Downloading regressor...")
+    reg_path = hf_hub_download(
+        repo_id=MODEL_REPO,
+        filename="models_regressor/sector_income_randomforestmodel.pkl",
+        cache_dir=CACHE_DIR
+    )
+    st.write(f"✓ Regressor downloaded: {os.path.getsize(reg_path)} bytes")
+    
+    # Try to load regressor
+    st.write("📦 Loading regressor with joblib...")
+    reg_data = joblib.load(reg_path)
+    st.write(f"✓ Regressor loaded: type={type(reg_data)}")
+    if isinstance(reg_data, dict):
+        st.write(f"  Dict keys: {list(reg_data.keys())}")
+    
+except Exception as e:
+    st.error(f"✗ Regressor error: {e}")
+    import traceback
+    st.write(traceback.format_exc())
+    st.stop()
 
-def preprocess_features(raw_df):
+st.success("✅ All diagnostics complete!")
     """Preprocess input features."""
     try:
         encoded = []
