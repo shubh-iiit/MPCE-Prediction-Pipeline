@@ -119,8 +119,8 @@ async def predict(data: Dict[str, Any]):
             status_code=500
         )
 
-# Serve static files
-try:
-    app.mount("/", StaticFiles(directory="public", html=True), name="static")
-except:
-    pass
+# Mount static files last (so API routes take precedence)
+from pathlib import Path
+static_dir = Path(__file__).parent.parent / "public"
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
