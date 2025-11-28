@@ -8,3 +8,5 @@ joblib
 streamlit
 notebook
 jupyter
+gdown
+xgboost
