@@ -1,4 +1,4 @@
-"""FastAPI app for MPCE predictions on Vercel."""
+"""FastAPI app for MPCE predictions."""
 import os
 import json
 import joblib
@@ -6,9 +6,9 @@ from typing import Dict, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from huggingface_hub import hf_hub_download
 import pandas as pd
-import numpy as np
 
 app = FastAPI()
 
@@ -62,7 +62,7 @@ async def root():
     """Health check endpoint."""
     return {"status": "ok", "message": "MPCE Prediction API"}
 
-@app.post("/predict")
+@app.post("/api/predict")
 async def predict(data: Dict[str, Any]):
     """Make a prediction."""
     try:
@@ -118,3 +118,9 @@ async def predict(data: Dict[str, Any]):
             {"error": str(e)},
             status_code=500
         )
+
+# Serve static files
+try:
+    app.mount("/", StaticFiles(directory="public", html=True), name="static")
+except:
+    pass
