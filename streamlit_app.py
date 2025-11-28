@@ -4,6 +4,7 @@ import joblib
 import os
 import warnings
 import pickle
+import gc
 
 warnings.filterwarnings('ignore')
 
@@ -15,82 +16,119 @@ MODEL_REPO = "shubh-iiit/mpce-models"
 CACHE_DIR = os.path.expanduser('~/.mpce_cache')
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# ==================== CACHED MODEL LOADING ====================
-@st.cache_resource(show_spinner=False)
-def load_models():
-    """Load models once and cache them."""
-    from huggingface_hub import hf_hub_download
+# ==================== LAZY MODEL LOADING WITH MEMORY MANAGEMENT ====================
+class ModelLoader:
+    """Lazy loader for models with memory cleanup."""
+    _instance = None
+    _models = None
     
-    with st.spinner("📥 Loading models from Hugging Face..."):
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ModelLoader, cls).__new__(cls)
+        return cls._instance
+    
+    def get_models(self):
+        """Get models, loading them if needed."""
+        if self._models is not None:
+            return self._models
+        
+        from huggingface_hub import hf_hub_download
+        
         try:
-            # Download and load classifier
-            clf_path = hf_hub_download(
-                repo_id=MODEL_REPO,
-                filename="models_clf/sector_income_classifiers_tuned.pkl",
-                cache_dir=CACHE_DIR
-            )
-            clf_data = joblib.load(clf_path)
-            
-            # Download and load regressor
-            reg_path = hf_hub_download(
-                repo_id=MODEL_REPO,
-                filename="models_regressor/sector_income_randomforestmodel.pkl",
-                cache_dir=CACHE_DIR
-            )
-            reg_data = joblib.load(reg_path)
-            
-            return clf_data, reg_data
+            with st.spinner("📥 Loading models..."):
+                # Download files
+                clf_path = hf_hub_download(
+                    repo_id=MODEL_REPO,
+                    filename="models_clf/sector_income_classifiers_tuned.pkl",
+                    cache_dir=CACHE_DIR
+                )
+                reg_path = hf_hub_download(
+                    repo_id=MODEL_REPO,
+                    filename="models_regressor/sector_income_randomforestmodel.pkl",
+                    cache_dir=CACHE_DIR
+                )
+                
+                # Load with memory optimization
+                st.write("Loading classifier...")
+                clf_data = joblib.load(clf_path, mmap_mode='r' if os.path.getsize(clf_path) > 100*1024*1024 else None)
+                st.write("Loading regressor...")
+                reg_data = joblib.load(reg_path, mmap_mode='r' if os.path.getsize(reg_path) > 100*1024*1024 else None)
+                
+                self._models = (clf_data, reg_data)
+                gc.collect()  # Force garbage collection
+                return self._models
         except Exception as e:
-            st.error(f"Failed to load models: {e}")
+            st.error(f"❌ Failed to load models: {e}")
+            import traceback
+            st.write(traceback.format_exc())
             return None, None
+
+@st.cache_resource
+def load_models():
+    """Wrapper for model loading with caching."""
+    loader = ModelLoader()
+    return loader.get_models()
 
 # ==================== INITIALIZE ====================
 st.title("🏠 MPCE Household Prediction")
+st.markdown("Predict Monthly Per Capita Expenditure (MPCE) based on household characteristics")
 
-# Load models
+# Load models with error handling
 clf_data, reg_data = load_models()
 
 if clf_data is None or reg_data is None:
-    st.error("Could not load models. Please refresh the page.")
+    st.error("⚠️ Could not load models. This might be a temporary issue. Please refresh the page.")
+    st.info("If the issue persists, the Streamlit Cloud instance may need more resources.")
     st.stop()
 
-# Parse models structure
+# Parse models - with defensive programming
 try:
     regressors_raw = reg_data.get("models", {})
-    regressors = {int(k): v for k, v in regressors_raw.items()}
-    feature_info = reg_data.get("feature_info", {})
+    if not regressors_raw:
+        raise ValueError("No 'models' key in regressor data")
     
+    regressors = {}
+    for k, v in regressors_raw.items():
+        regressors[int(k)] = v
+    
+    feature_info = reg_data.get("feature_info", {})
     cat_cols = feature_info.get("categorical_cols", [])
     num_cols = feature_info.get("numerical_cols", [])
     encoders = feature_info.get("encoders", {})
     scaler = feature_info.get("scaler")
+    
+    st.success("✅ Models loaded successfully!")
 except Exception as e:
-    st.error(f"Failed to parse models: {e}")
+    st.error(f"❌ Error parsing models: {e}")
+    import traceback
+    st.write(traceback.format_exc())
     st.stop()
 
 # ==================== PREPROCESSING ====================
-@st.cache_data
-def preprocess_features(_input_df):
-    """Preprocess input features. Cached to avoid recomputation."""
+def preprocess_input(input_data_dict):
+    """Preprocess input data for prediction."""
     try:
+        input_df = pd.DataFrame([input_data_dict])
         encoded_parts = []
         
         # Encode categorical features
         for col in cat_cols:
-            if col in _input_df.columns and col in encoders:
-                encoded = encoders[col].transform(_input_df[[col]])
-                encoded_parts.append(pd.DataFrame(encoded, columns=[f"{col}_encoded"]))
+            if col in input_df.columns and col in encoders:
+                encoded = encoders[col].transform(input_df[[col]])
+                encoded_parts.append(pd.DataFrame(encoded, columns=[col]))
         
         # Scale numerical features
         if num_cols and scaler:
-            scaled = scaler.transform(_input_df[num_cols])
+            scaled = scaler.transform(input_df[num_cols])
             encoded_parts.append(pd.DataFrame(scaled, columns=num_cols))
         
         if encoded_parts:
-            return pd.concat(encoded_parts, axis=1)
-        return _input_df
+            result = pd.concat(encoded_parts, axis=1)
+            return result
+        
+        return input_df
     except Exception as e:
-        st.error(f"Preprocessing failed: {e}")
+        st.error(f"Preprocessing error: {e}")
         return None
 
 # ==================== UI ====================
@@ -178,16 +216,10 @@ with col8:
 if st.button("🔮 Predict MPCE", use_container_width=True, key="predict_btn"):
     try:
         input_data = {
-            "Sector": sector,
-            "State": state,
-            "NSS-Region": nss_region,
-            "District": district,
-            "Household Type": household_type,
-            "Religion of the head of the household": religion,
-            "Social Group of the head of the household": social_group,
-            "HH Size (For FDQ)": hh_size,
-            "NCO_3D": nco_3d,
-            "NIC_5D": nic_5d,
+            "Sector": sector, "State": state, "NSS-Region": nss_region, "District": district,
+            "Household Type": household_type, "Religion of the head of the household": religion,
+            "Social Group of the head of the household": social_group, "HH Size (For FDQ)": hh_size,
+            "NCO_3D": nco_3d, "NIC_5D": nic_5d,
             "Is_online_Clothing_Purchased_Last365": int(is_online_clothing),
             "Is_online_Footwear_Purchased_Last365": int(is_online_footwear),
             "Is_online_Furniture_fixturesPurchased_Last365": int(is_online_furniture),
@@ -199,27 +231,16 @@ if st.button("🔮 Predict MPCE", use_container_width=True, key="predict_btn"):
             "Is_online_Sports_Goods_Purchased_Last365": int(is_online_sports),
             "Is_online_Medical_Equipment_Purchased_Last365": int(is_online_medical),
             "Is_online_Bedding_Purchased_Last365": int(is_online_bedding),
-            "Is_HH_Have_Television": int(is_tv),
-            "Is_HH_Have_Radio": int(is_radio),
-            "Is_HH_Have_Laptop_PC": int(is_laptop),
-            "Is_HH_Have_Mobile_handset": int(is_mobile_handset),
-            "Is_HH_Have_Bicycle": int(is_bicycle),
-            "Is_HH_Have_Motorcycle_scooter": int(is_motorcycle),
-            "Is_HH_Have_Motorcar_jeep_van": int(is_motorcar),
-            "Is_HH_Have_Trucks": int(is_trucks),
-            "Is_HH_Have_Animal_cart": int(is_animal_cart),
-            "Is_HH_Have_Refrigerator": int(is_refrigerator),
+            "Is_HH_Have_Television": int(is_tv), "Is_HH_Have_Radio": int(is_radio),
+            "Is_HH_Have_Laptop_PC": int(is_laptop), "Is_HH_Have_Mobile_handset": int(is_mobile_handset),
+            "Is_HH_Have_Bicycle": int(is_bicycle), "Is_HH_Have_Motorcycle_scooter": int(is_motorcycle),
+            "Is_HH_Have_Motorcar_jeep_van": int(is_motorcar), "Is_HH_Have_Trucks": int(is_trucks),
+            "Is_HH_Have_Animal_cart": int(is_animal_cart), "Is_HH_Have_Refrigerator": int(is_refrigerator),
             "Is_HH_Have_Washing_machine": int(is_washing_machine),
             "Is_HH_Have_Airconditioner_aircooler": int(is_ac),
-            "person_count": person_count,
-            "avg_age": avg_age,
-            "max_age": max_age,
-            "min_age": min_age,
-            "gender_1_count": gender_1_count,
-            "gender_2_count": gender_2_count,
-            "gender_3_count": gender_3_count,
-            "avg_education": avg_education,
-            "max_education": max_education,
+            "person_count": person_count, "avg_age": avg_age, "max_age": max_age, "min_age": min_age,
+            "gender_1_count": gender_1_count, "gender_2_count": gender_2_count, "gender_3_count": gender_3_count,
+            "avg_education": avg_education, "max_education": max_education,
             "No. of meals usually taken in a day_sum": meals_day_sum,
             "No. of meals usually taken in a day_mean": meals_day_mean,
             "No. of meals taken during last 30 days from school, balwadi etc._sum": meals_school_sum,
@@ -233,24 +254,27 @@ if st.button("🔮 Predict MPCE", use_container_width=True, key="predict_btn"):
             "internet_users_count": internet_users_count
         }
         
-        input_df = pd.DataFrame([input_data])
-        processed_df = preprocess_features(input_df)
+        processed_df = preprocess_input(input_data)
         
         if processed_df is None:
-            st.error("Feature processing failed")
+            st.error("Could not process input data")
         else:
             if sector not in regressors:
                 st.error(f"No model available for sector {sector}")
             else:
-                regressor = regressors[sector]
-                predicted_mpce = regressor.predict(processed_df)[0]
-                sector_name = "Rural" if sector == 1 else "Urban"
-                
-                st.success("✅ Prediction Complete!")
-                col_r1, col_r2 = st.columns(2)
-                with col_r1:
-                    st.metric("Predicted MPCE (₹)", f"{predicted_mpce:,.2f}")
-                with col_r2:
-                    st.metric("Sector", sector_name)
+                with st.spinner("Making prediction..."):
+                    regressor = regressors[sector]
+                    predicted_mpce = regressor.predict(processed_df)[0]
+                    sector_name = "Rural" if sector == 1 else "Urban"
+                    
+                    st.success("✅ Prediction Complete!")
+                    col_r1, col_r2 = st.columns(2)
+                    with col_r1:
+                        st.metric("Predicted MPCE (₹)", f"{predicted_mpce:,.2f}")
+                    with col_r2:
+                        st.metric("Sector", sector_name)
     except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+        st.error(f"❌ Prediction error: {str(e)}")
+        import traceback
+        with st.expander("Error details"):
+            st.write(traceback.format_exc())
