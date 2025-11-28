@@ -102,19 +102,28 @@
         font-weight: bold;
         margin-right: 8px;
       }
+      .badge {
+        display: inline-block;
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 8px;
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="card">
-        <h1>MPCE Prediction Pipeline</h1>
+        <h1>MPCE Prediction Pipeline <span class="badge">LIVE</span></h1>
         <p class="subtitle">Monthly Per Capita Expenditure Prediction using Machine Learning</p>
-        
-        <p>This project implements an end-to-end ML pipeline for predicting household expenditure patterns using advanced classification and regression techniques.</p>
 
+        <p>This project implements an end-to-end ML pipeline for predicting household expenditure patterns using advanced classification and regression techniques.</p>
         <div class="links">
-          <a href="https://mpce-dashboard.streamlit.app/" class="btn-primary" target="_blank" rel="noopener noreferrer">
-            → Live Demo (Streamlit App)
+          <a href="https://mpce-prediction.vercel.app/" class="btn-primary" target="_blank" rel="noopener noreferrer">
+            🚀 Live Prediction Tool (Vercel)
           </a>
           <a href="https://github.com/shubh-iiit/MPCE-Prediction-Pipeline/blob/main/Insights.ipynb" class="btn-secondary" target="_blank" rel="noopener noreferrer">
             📊 Detailed Analysis Notebook
@@ -129,9 +138,9 @@
           <ul>
             <li>End-to-end ML pipeline with data preprocessing</li>
             <li>XGBoost classification and regression models</li>
-            <li>Interactive Streamlit dashboard</li>
+            <li>Interactive web dashboard with Vercel deployment</li>
             <li>Comprehensive exploratory data analysis</li>
-            <li>Production-ready deployment</li>
+            <li>Production-ready API backend with FastAPI</li>
           </ul>
         </div>
       </div>
