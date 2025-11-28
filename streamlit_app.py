@@ -109,11 +109,32 @@ if clf_data is None or reg_data is None:
 
 st.write("Parsing models...")
 try:
-    regressors_raw = reg_data.get("models", {})
-    regressors = {int(k): v for k, v in regressors_raw.items()}
-    feature_info = reg_data.get("feature_info", {})
+    st.write(f"📊 Regressor data type: {type(reg_data)}")
+    st.write(f"📊 Regressor keys: {list(reg_data.keys()) if isinstance(reg_data, dict) else 'Not a dict'}")
+    st.write(f"📊 Classifier data type: {type(clf_data)}")
+    st.write(f"📊 Classifier keys: {list(clf_data.keys()) if isinstance(clf_data, dict) else 'Not a dict'}")
     
-    cat_cols = feature_info.get("categorical_cols", [])
+    # Handle different possible structures
+    if isinstance(reg_data, dict):
+        regressors_raw = reg_data.get("models", {})
+        if not regressors_raw:
+            st.write("⚠️ 'models' key not found, checking for direct regressor...")
+            regressors_raw = {1: reg_data, 2: reg_data}  # Fallback
+        
+        regressors = {int(k): v for k, v in regressors_raw.items()}
+        feature_info = reg_data.get("feature_info", {})
+    else:
+        st.write("⚠️ Regressor is not a dict, treating as direct model")
+        regressors = {1: reg_data, 2: reg_data}
+        feature_info = {}
+    
+    if isinstance(clf_data, dict):
+        cat_cols = clf_data.get("feature_info", {}).get("categorical_cols", [])
+        if not cat_cols and "categorical_cols" in clf_data:
+            cat_cols = clf_data["categorical_cols"]
+    else:
+        cat_cols = []
+    
     num_cols = feature_info.get("numerical_cols", [])
     encoders = feature_info.get("encoders", {})
     scaler = feature_info.get("scaler")
