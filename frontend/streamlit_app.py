@@ -4,6 +4,10 @@ import os
 import gdown
 import pandas as pd
 from typing import Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # ==================== Google Drive Model Loading ====================
 MODELS_BASE_DIR = os.path.expanduser('~/.mpce_models')
@@ -13,37 +17,69 @@ DRIVE_FOLDERS = {
 }
 
 
+def download_model_folder(folder_type: str, folder_id: str, output_dir: str) -> bool:
+    """Download a single model folder from Google Drive."""
+    try:
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
+        # Check if already downloaded
+        if os.path.exists(output_dir) and os.listdir(output_dir):
+            logging.info(f"{folder_type} models already cached")
+            return True
+        
+        url = f'https://drive.google.com/drive/folders/{folder_id}'
+        logging.info(f"Downloading {folder_type} models...")
+        gdown.download_folder(url, output=output_dir, quiet=False)
+        return True
+    except Exception as e:
+        logging.error(f"Error downloading {folder_type}: {e}")
+        return False
+
+
 @st.cache_resource
 def download_and_load_models():
-    """Download models from Google Drive and cache them."""
+    """Download models from Google Drive in parallel and cache them."""
     clf_dir = os.path.join(MODELS_BASE_DIR, 'models_clf')
     regressor_dir = os.path.join(MODELS_BASE_DIR, 'models_regressor')
     
-    # Download classifier models if needed
-    if not os.path.exists(clf_dir) or not os.listdir(clf_dir):
-        st.info("📥 Downloading classifier models from Google Drive...")
-        os.makedirs(clf_dir, exist_ok=True)
-        url = f'https://drive.google.com/drive/folders/{DRIVE_FOLDERS["clf"]}'
-        gdown.download_folder(url, output=clf_dir, quiet=True)
+    progress_placeholder = st.empty()
     
-    # Download regressor models if needed
-    if not os.path.exists(regressor_dir) or not os.listdir(regressor_dir):
-        st.info("📥 Downloading regressor models from Google Drive...")
-        os.makedirs(regressor_dir, exist_ok=True)
-        url = f'https://drive.google.com/drive/folders/{DRIVE_FOLDERS["regressor"]}'
-        gdown.download_folder(url, output=regressor_dir, quiet=True)
+    # Download both in parallel
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        clf_future = executor.submit(download_model_folder, 'Classifier', DRIVE_FOLDERS['clf'], clf_dir)
+        reg_future = executor.submit(download_model_folder, 'Regressor', DRIVE_FOLDERS['regressor'], regressor_dir)
+        
+        # Wait for both to complete
+        results = []
+        for future in as_completed([clf_future, reg_future]):
+            results.append(future.result())
     
+    if not all(results):
+        st.error("❌ Failed to download models. Please refresh the page.")
+        st.stop()
+
     # Load classifier
     clf_path = os.path.join(clf_dir, 'sector_income_classifiers_tuned.pkl')
-    clf_data = joblib.load(clf_path)
+    if not os.path.exists(clf_path):
+        st.error(f"❌ Classifier model not found at {clf_path}")
+        st.stop()
     
+    progress_placeholder.info("📦 Loading classifier model...")
+    clf_data = joblib.load(clf_path)
+
     # Load regressor
     reg_path = os.path.join(regressor_dir, 'sector_income_randomforestmodel.pkl')
+    if not os.path.exists(reg_path):
+        st.error(f"❌ Regressor model not found at {reg_path}")
+        st.stop()
+    
+    progress_placeholder.info("📦 Loading regressor model...")
     reg_data = joblib.load(reg_path)
     
+    progress_placeholder.success("✅ Models loaded successfully!")
+
     return clf_data, reg_data
-
-
 # ==================== Load Models ====================
 st.set_page_config(page_title="MPCE Prediction", layout="wide")
 
