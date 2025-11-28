@@ -1,11 +1,14 @@
 {
   "version": 2,
+  "buildCommand": "echo 'Skipping build'",
+  "outputDirectory": ".",
   "builds": [
     {
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.12"
       }
     }
   ],
@@ -18,5 +21,8 @@
       "src": "/(.*)",
       "dest": "/public/index.html"
     }
-  ]
+  ],
+  "env": {
+    "PYTHONUNBUFFERED": "1"
+  }
 }
