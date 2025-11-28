@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MPCE Prediction Pipeline</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        width: 100%;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        padding: 40px;
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 8px;
+        font-size: 28px;
+      }
+      .subtitle {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+      p {
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 16px;
+      }
+      .links {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        font-size: 15px;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+      }
+      .btn-secondary {
+        background: #f0f0f0;
+        color: #333;
+        border: 1px solid #ddd;
+      }
+      .btn-secondary:hover {
+        background: #e8e8e8;
+      }
+      .features {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 24px;
+      }
+      .features h3 {
+        color: #333;
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+      .features ul {
+        list-style: none;
+        color: #666;
+        font-size: 14px;
+      }
+      .features li {
+        padding: 6px 0;
+      }
+      .features li:before {
+        content: "✓ ";
+        color: #667eea;
+        font-weight: bold;
+        margin-right: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>MPCE Prediction Pipeline</h1>
+        <p class="subtitle">Monthly Per Capita Expenditure Prediction using Machine Learning</p>
+        
+        <p>This project implements an end-to-end ML pipeline for predicting household expenditure patterns using advanced classification and regression techniques.</p>
+
+        <div class="links">
+          <a href="https://mpce-prediction-pipeline.streamlit.app/" class="btn-primary" target="_blank" rel="noopener noreferrer">
+            → Live Demo (Streamlit App)
+          </a>
+          <a href="https://github.com/shubh-iiit/MPCE-Prediction-Pipeline/blob/main/Insights.ipynb" class="btn-secondary" target="_blank" rel="noopener noreferrer">
+            📊 Detailed Analysis Notebook
+          </a>
+          <a href="https://github.com/shubh-iiit/MPCE-Prediction-Pipeline" class="btn-secondary" target="_blank" rel="noopener noreferrer">
+            🔗 View on GitHub
+          </a>
+        </div>
+
+        <div class="features">
+          <h3>Key Features</h3>
+          <ul>
+            <li>End-to-end ML pipeline with data preprocessing</li>
+            <li>XGBoost classification and regression models</li>
+            <li>Interactive Streamlit dashboard</li>
+            <li>Comprehensive exploratory data analysis</li>
+            <li>Production-ready deployment</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
