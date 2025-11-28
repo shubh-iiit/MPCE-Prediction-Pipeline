@@ -10,3 +10,4 @@ notebook
 jupyter
 gdown
 xgboost
+huggingface-hub
