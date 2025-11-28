@@ -1,13 +1,14 @@
 {
   "version": 2,
+  "buildCommand": "bash build.sh",
   "builds": [
     {
       "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.11"
+      }
     }
   ],
   "routes": [
@@ -17,7 +18,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/public/"
+      "dest": "/public/index.html"
     }
   ]
 }
