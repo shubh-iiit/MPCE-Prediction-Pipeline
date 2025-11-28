@@ -30,35 +30,33 @@ def load_models():
     global _models_cache
     
     if _models_cache is not None:
+        print("Using cached models")
         return _models_cache
     
     try:
+        print("Loading models from Hugging Face...")
         MODEL_REPO = "shubh-iiit/mpce-models"
         CACHE_DIR = "/tmp/mpce_cache"
         os.makedirs(CACHE_DIR, exist_ok=True)
         
-        # Download classifier
-        clf_path = hf_hub_download(
-            repo_id=MODEL_REPO,
-            filename="models_clf/sector_income_classifiers_tuned.pkl",
-            cache_dir=CACHE_DIR
-        )
-        clf_data = joblib.load(clf_path)
-        
-        # Download regressor
+        # Download regressor only (simpler and sufficient for predictions)
+        print(f"Downloading from {MODEL_REPO}")
         reg_path = hf_hub_download(
             repo_id=MODEL_REPO,
             filename="models_regressor/sector_income_randomforestmodel.pkl",
             cache_dir=CACHE_DIR
         )
+        print(f"Loading model from {reg_path}")
         reg_data = joblib.load(reg_path)
-        
-        _models_cache = (clf_data, reg_data)
+        print("Model loaded successfully")
+
+        _models_cache = (None, reg_data)  # No classifier needed for now
         return _models_cache
     except Exception as e:
-        raise Exception(f"Failed to load models: {str(e)}")
-
-@app.get("/health")
+        print(f"Error loading models: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise Exception(f"Failed to load models: {str(e)}")@app.get("/health")
 async def health():
     """Health check endpoint."""
     return {"status": "ok", "message": "MPCE Prediction API"}
