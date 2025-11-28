@@ -20,6 +20,9 @@ This repository contains code and resources for predicting Monthly Per Capita Ex
 
 ---
 
+# Live Link:
+https://shubh-iiit.github.io/MPCE-Prediction-Pipeline/
+
 ## Project Structure
 ```
 .
