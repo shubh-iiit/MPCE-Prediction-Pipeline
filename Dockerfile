@@ -9,5 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY api/ ./api/
 COPY public/ ./public/
+COPY start.sh .
 
-CMD uvicorn api.index:app --host 0.0.0.0 --port $PORT
+RUN chmod +x start.sh
+
+CMD ["sh", "start.sh"]
