@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPCE Prediction</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .content {
+            padding: 40px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.95em;
+        }
+        .form-group input,
+        .form-group select {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        .predict-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 30px;
+        }
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .predict-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 30px;
+            display: none;
+        }
+        .result.show { display: block; animation: slideIn 0.3s ease; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .result-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .result-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            border-radius: 6px;
+            color: #c62828;
+            margin-top: 20px;
+            display: none;
+        }
+        .error.show { display: block; }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .loading.show { display: block; }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 MPCE Prediction</h1>
+            <p>Monthly Per Capita Expenditure Estimator</p>
+        </div>
+        
+        <div class="content">
+            <form id="predictionForm">
+                <!-- Sector & Location -->
+                <div class="section-title">Location & Sector</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Sector *</label>
+                        <select id="sector" required>
+                            <option value="1">Rural</option>
+                            <option value="2">Urban</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>State</label>
+                        <input type="number" id="state" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>NSS Region</label>
+                        <input type="number" id="nss_region" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>District</label>
+                        <input type="number" id="district" value="1" min="1">
+                    </div>
+                </div>
+
+                <!-- Household Info -->
+                <div class="section-title">Household Information</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Household Type</label>
+                        <input type="number" id="household_type" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Religion</label>
+                        <input type="number" id="religion" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Social Group</label>
+                        <input type="number" id="social_group" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>HH Size</label>
+                        <input type="number" id="hh_size" value="4" min="1">
+                    </div>
+                </div>
+
+                <!-- Demographics -->
+                <div class="section-title">Demographics</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Person Count</label>
+                        <input type="number" id="person_count" value="4" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Avg Age</label>
+                        <input type="number" id="avg_age" value="35" min="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Age</label>
+                        <input type="number" id="max_age" value="70" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Min Age</label>
+                        <input type="number" id="min_age" value="5" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Gender 1 Count</label>
+                        <input type="number" id="gender_1_count" value="2" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Gender 2 Count</label>
+                        <input type="number" id="gender_2_count" value="2" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Gender 3 Count</label>
+                        <input type="number" id="gender_3_count" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Avg Education</label>
+                        <input type="number" id="avg_education" value="8" min="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Education</label>
+                        <input type="number" id="max_education" value="12" min="0" step="0.1">
+                    </div>
+                </div>
+
+                <!-- Employment -->
+                <div class="section-title">Employment & Industry</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>NCO_3D (Occupation)</label>
+                        <input type="number" id="nco_3d" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>NIC_5D (Industry)</label>
+                        <input type="number" id="nic_5d" value="0" min="0">
+                    </div>
+                </div>
+
+                <!-- Meals -->
+                <div class="section-title">Meal Information</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Meals/Day (Sum)</label>
+                        <input type="number" id="meals_day_sum" value="3" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Meals/Day (Mean)</label>
+                        <input type="number" id="meals_day_mean" value="3" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>School Meals (Sum)</label>
+                        <input type="number" id="meals_school_sum" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>School Meals (Mean)</label>
+                        <input type="number" id="meals_school_mean" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Employer Meals (Sum)</label>
+                        <input type="number" id="meals_employer_sum" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Employer Meals (Mean)</label>
+                        <input type="number" id="meals_employer_mean" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Paid Meals (Sum)</label>
+                        <input type="number" id="meals_payment_sum" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Paid Meals (Mean)</label>
+                        <input type="number" id="meals_payment_mean" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Home Meals (Sum)</label>
+                        <input type="number" id="meals_home_sum" value="3" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Home Meals (Mean)</label>
+                        <input type="number" id="meals_home_mean" value="3" step="0.1">
+                    </div>
+                </div>
+
+                <!-- Online Purchases -->
+                <div class="section-title">Online Purchases (Last 365 Days)</div>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_clothing">
+                        <label for="is_online_clothing">Clothing</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_footwear">
+                        <label for="is_online_footwear">Footwear</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_furniture">
+                        <label for="is_online_furniture">Furniture</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_mobile">
+                        <label for="is_online_mobile">Mobile</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_personal">
+                        <label for="is_online_personal">Personal Goods</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_recreation">
+                        <label for="is_online_recreation">Recreation</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_appliances">
+                        <label for="is_online_appliances">Appliances</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_crockery">
+                        <label for="is_online_crockery">Crockery</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_sports">
+                        <label for="is_online_sports">Sports</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_medical">
+                        <label for="is_online_medical">Medical</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_online_bedding">
+                        <label for="is_online_bedding">Bedding</label>
+                    </div>
+                </div>
+
+                <!-- Assets -->
+                <div class="section-title">Household Assets</div>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_tv">
+                        <label for="is_tv">Television</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_radio">
+                        <label for="is_radio">Radio</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_laptop">
+                        <label for="is_laptop">Laptop</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_mobile_handset">
+                        <label for="is_mobile_handset">Mobile Handset</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_bicycle">
+                        <label for="is_bicycle">Bicycle</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_motorcycle">
+                        <label for="is_motorcycle">Motorcycle</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_motorcar">
+                        <label for="is_motorcar">Motor Car</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_trucks">
+                        <label for="is_trucks">Trucks</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_animal_cart">
+                        <label for="is_animal_cart">Animal Cart</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_refrigerator">
+                        <label for="is_refrigerator">Refrigerator</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_washing_machine">
+                        <label for="is_washing_machine">Washing Machine</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="is_ac">
+                        <label for="is_ac">AC/Cooler</label>
+                    </div>
+                </div>
+
+                <!-- Internet -->
+                <div class="section-title">Internet Usage</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Internet Users Count</label>
+                        <input type="number" id="internet_users_count" value="0" min="0">
+                    </div>
+                </div>
+
+                <button type="submit" class="predict-btn">🔮 Predict MPCE</button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Calculating prediction...</p>
+            </div>
+
+            <div class="result" id="result">
+                <h3>✅ Prediction Result</h3>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="result-label">Predicted MPCE (₹)</div>
+                        <div class="result-value" id="mpce_value">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Sector</div>
+                        <div class="result-value" id="sector_value">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error" id="error"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+            
+            loading.classList.add('show');
+            result.classList.remove('show');
+            error.classList.remove('show');
+            
+            try {
+                const formData = {
+                    sector: parseInt(document.getElementById('sector').value),
+                    State: parseInt(document.getElementById('state').value),
+                    'NSS-Region': parseInt(document.getElementById('nss_region').value),
+                    District: parseInt(document.getElementById('district').value),
+                    'Household Type': parseInt(document.getElementById('household_type').value),
+                    'Religion of the head of the household': parseInt(document.getElementById('religion').value),
+                    'Social Group of the head of the household': parseInt(document.getElementById('social_group').value),
+                    'HH Size (For FDQ)': parseInt(document.getElementById('hh_size').value),
+                    NCO_3D: parseInt(document.getElementById('nco_3d').value),
+                    NIC_5D: parseInt(document.getElementById('nic_5d').value),
+                    Is_online_Clothing_Purchased_Last365: document.getElementById('is_online_clothing').checked ? 1 : 0,
+                    Is_online_Footwear_Purchased_Last365: document.getElementById('is_online_footwear').checked ? 1 : 0,
+                    Is_online_Furniture_fixturesPurchased_Last365: document.getElementById('is_online_furniture').checked ? 1 : 0,
+                    Is_online_Mobile_Handset_Purchased_Last365: document.getElementById('is_online_mobile').checked ? 1 : 0,
+                    Is_online_Personal_Goods_Purchased_Last365: document.getElementById('is_online_personal').checked ? 1 : 0,
+                    Is_online_Recreation_Goods_Purchased_Last365: document.getElementById('is_online_recreation').checked ? 1 : 0,
+                    Is_online_Household_Appliances_Purchased_Last365: document.getElementById('is_online_appliances').checked ? 1 : 0,
+                    Is_online_Crockery_Utensils_Purchased_Last365: document.getElementById('is_online_crockery').checked ? 1 : 0,
+                    Is_online_Sports_Goods_Purchased_Last365: document.getElementById('is_online_sports').checked ? 1 : 0,
+                    Is_online_Medical_Equipment_Purchased_Last365: document.getElementById('is_online_medical').checked ? 1 : 0,
+                    Is_online_Bedding_Purchased_Last365: document.getElementById('is_online_bedding').checked ? 1 : 0,
+                    Is_HH_Have_Television: document.getElementById('is_tv').checked ? 1 : 0,
+                    Is_HH_Have_Radio: document.getElementById('is_radio').checked ? 1 : 0,
+                    Is_HH_Have_Laptop_PC: document.getElementById('is_laptop').checked ? 1 : 0,
+                    Is_HH_Have_Mobile_handset: document.getElementById('is_mobile_handset').checked ? 1 : 0,
+                    Is_HH_Have_Bicycle: document.getElementById('is_bicycle').checked ? 1 : 0,
+                    Is_HH_Have_Motorcycle_scooter: document.getElementById('is_motorcycle').checked ? 1 : 0,
+                    Is_HH_Have_Motorcar_jeep_van: document.getElementById('is_motorcar').checked ? 1 : 0,
+                    Is_HH_Have_Trucks: document.getElementById('is_trucks').checked ? 1 : 0,
+                    Is_HH_Have_Animal_cart: document.getElementById('is_animal_cart').checked ? 1 : 0,
+                    Is_HH_Have_Refrigerator: document.getElementById('is_refrigerator').checked ? 1 : 0,
+                    Is_HH_Have_Washing_machine: document.getElementById('is_washing_machine').checked ? 1 : 0,
+                    Is_HH_Have_Airconditioner_aircooler: document.getElementById('is_ac').checked ? 1 : 0,
+                    person_count: parseInt(document.getElementById('person_count').value),
+                    avg_age: parseFloat(document.getElementById('avg_age').value),
+                    max_age: parseInt(document.getElementById('max_age').value),
+                    min_age: parseInt(document.getElementById('min_age').value),
+                    gender_1_count: parseInt(document.getElementById('gender_1_count').value),
+                    gender_2_count: parseInt(document.getElementById('gender_2_count').value),
+                    gender_3_count: parseInt(document.getElementById('gender_3_count').value),
+                    avg_education: parseFloat(document.getElementById('avg_education').value),
+                    max_education: parseFloat(document.getElementById('max_education').value),
+                    'No. of meals usually taken in a day_sum': parseFloat(document.getElementById('meals_day_sum').value),
+                    'No. of meals usually taken in a day_mean': parseFloat(document.getElementById('meals_day_mean').value),
+                    'No. of meals taken during last 30 days from school, balwadi etc._sum': parseFloat(document.getElementById('meals_school_sum').value),
+                    'No. of meals taken during last 30 days from school, balwadi etc._mean': parseFloat(document.getElementById('meals_school_mean').value),
+                    'No. of meals taken during last 30 days from employer as perquisites or part of wage_sum': parseFloat(document.getElementById('meals_employer_sum').value),
+                    'No. of meals taken during last 30 days from employer as perquisites or part of wage_mean': parseFloat(document.getElementById('meals_employer_mean').value),
+                    'No. of meals taken during last 30 days on payment_sum': parseFloat(document.getElementById('meals_payment_sum').value),
+                    'No. of meals taken during last 30 days on payment_mean': parseFloat(document.getElementById('meals_payment_mean').value),
+                    'No. of meals taken during last 30 days at home_sum': parseFloat(document.getElementById('meals_home_sum').value),
+                    'No. of meals taken during last 30 days at home_mean': parseFloat(document.getElementById('meals_home_mean').value),
+                    internet_users_count: parseInt(document.getElementById('internet_users_count').value)
+                };
+                
+                const response = await fetch(`${API_BASE}/api/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Prediction failed');
+                }
+                
+                document.getElementById('mpce_value').textContent = `₹${data.mpce.toLocaleString('en-IN', {maximumFractionDigits: 2})}`;
+                document.getElementById('sector_value').textContent = data.sector;
+                result.classList.add('show');
+            } catch (err) {
+                error.textContent = '❌ ' + err.message;
+                error.classList.add('show');
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
